@@ -45,15 +45,15 @@ public class JdkClientHttpRequestFactory implements ClientHttpRequestFactory {
 
 
 	/**
-	 * Create a new instance of the {@code HttpComponentsClientHttpRequestFactory}
-	 * with a default {@link HttpClient} based on system properties.
+	 * Create a new instance of the {@code JdkClientHttpRequestFactory}
+	 * with a default {@link HttpClient}.
 	 */
 	public JdkClientHttpRequestFactory() {
 		this.httpClient = HttpClient.newHttpClient();
 	}
 
 	/**
-	 * Create a new instance of the {@code HttpComponentsClientHttpRequestFactory}
+	 * Create a new instance of the {@code JdkClientHttpRequestFactory}
 	 * with the given {@link HttpClient} instance.
 	 * @param httpClient the HttpClient instance to use for this request factory
 	 */
@@ -100,7 +100,6 @@ public class JdkClientHttpRequestFactory implements ClientHttpRequestFactory {
 	 * Indicates whether this request factory should buffer the request body internally.
 	 * <p>Default is {@code true}. When sending large amounts of data via POST or PUT, it is
 	 * recommended to change this property to {@code false}, so as not to run out of memory.
-	 * @since 4.0
 	 */
 	public void setBufferRequestBody(boolean bufferRequestBody) {
 		this.bufferRequestBody = bufferRequestBody;

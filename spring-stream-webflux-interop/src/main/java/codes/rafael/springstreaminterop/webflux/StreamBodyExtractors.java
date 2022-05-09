@@ -66,15 +66,41 @@ public class StreamBodyExtractors {
             InputStreamMapper<T> streamMapper,
             boolean failFast,
             int maximumMemorySize) {
+        return toMono(streamMapper, failFast, maximumMemorySize, true);
+    }
+
+    /**
+     * Extractor where the response body is returned as an {@link InputStream}. The
+     * returned stream must be closed manually.
+     * @return {@code BodyExtractor} that reads the response body as input stream
+     */
+    static BodyExtractor<Mono<InputStream>, ReactiveHttpInputMessage> toInputStream() {
+        return toMono(stream -> stream, true, 256 * 1024, false);
+    }
+
+    public static <T> BodyExtractor<Mono<T>, ReactiveHttpInputMessage> toMono(
+            InputStreamMapper<T> streamMapper,
+            boolean failFast,
+            int maximumMemorySize,
+            boolean close) {
 
         Assert.notNull(streamMapper, "'streamMapper' must not be null");
         Assert.isTrue(maximumMemorySize > 0, "'maximumMemorySize' must be positive");
         return (inputMessage, context) -> {
-            try (FlowBufferInputStream inputStream = new FlowBufferInputStream(maximumMemorySize, failFast)) {
+            FlowBufferInputStream inputStream = new FlowBufferInputStream(maximumMemorySize, failFast);
+            try {
                 inputMessage.getBody().subscribe(inputStream);
                 T value = streamMapper.apply(inputStream);
+                if (close) {
+                    inputStream.close();
+                }
                 return Mono.just(value);
             } catch (Throwable t) {
+                try {
+                    inputStream.close();
+                } catch (Throwable suppressed) {
+                    t.addSuppressed(suppressed);
+                }
                 return Mono.error(t);
             }
         };
@@ -235,12 +261,14 @@ public class StreamBodyExtractors {
                 throw new IOException("closed");
             } else if (this.current == null) {
                 return -1;
+            } else if (len == 0) {
+                return 0;
             }
             int sum = 0;
             do {
                 int read = this.current.inputStream.read(b, off + sum, len - sum);
                 if (read == -1) {
-                    if (this.backlog.isEmpty()) {
+                    if (sum > 0 && this.backlog.isEmpty()) {
                         return sum;
                     } else if (forward()) {
                         return sum == 0 ? -1 : sum;
